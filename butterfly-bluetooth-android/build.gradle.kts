@@ -66,6 +66,9 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.3.0")
     androidTestImplementation("com.android.support.test.espresso:espresso-core:3.0.2")
     api("com.polidea.rxandroidble2:rxandroidble:1.11.0")
+    api("androidx.appcompat:appcompat:1.2.0")
+    api("io.reactivex.rxjava2:rxkotlin:2.4.0")
+    api("io.reactivex.rxjava2:rxandroid:2.1.1")
 }
 
 tasks.create("sourceJar", Jar::class) {
