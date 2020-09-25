@@ -1,3 +1,4 @@
+//! This file is Khrysalis compatible.
 package com.lightningkite.butterfly.bluetooth
 
 import com.lightningkite.butterfly.Box

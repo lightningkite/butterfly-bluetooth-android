@@ -13,8 +13,8 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import com.lightningkite.butterfly.PlatformSpecific
-import com.lightningkite.butterfly.views.ViewDependency
-import com.lightningkite.butterfly.views.android.startIntent
+import com.lightningkite.butterfly.android.ActivityAccess
+import com.lightningkite.butterfly.views.startIntent
 import com.polidea.rxandroidble2.RxBleClient
 import com.polidea.rxandroidble2.scan.ScanFilter
 import com.polidea.rxandroidble2.scan.ScanSettings
@@ -30,7 +30,7 @@ object Ble {
 
     @PlatformSpecific
     fun activateBluetoothDialog(
-        dependency: ViewDependency,
+        dependency: ActivityAccess,
         onPermissionRejected: () -> Unit,
         onBluetooth: (BluetoothAdapter) -> Unit
     ) {
@@ -53,7 +53,7 @@ object Ble {
                     }
                 }
             } else {
-                dependency.startIntent(android.content.Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) { code, intent ->
+                dependency.startIntent(android.content.Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) { _, _ ->
                     activateBluetoothDialog(dependency, onPermissionRejected, onBluetooth)
                 }
             }
@@ -61,7 +61,7 @@ object Ble {
     }
 
     @PlatformSpecific
-    fun getBluetooth(dependency: ViewDependency): Observable<RxBleClient> {
+    fun getBluetooth(dependency: ActivityAccess): Observable<RxBleClient> {
         return Observable.create { emitter: ObservableEmitter<RxBleClient> ->
             activateBluetoothDialog(
                 dependency = dependency,
@@ -79,7 +79,7 @@ object Ble {
      * @param serviceUuids If default, advertises all services described by [characteristics].
      */
     fun serve(
-        viewDependency: ViewDependency,
+        viewDependency: ActivityAccess,
         characteristics: List<BleCharacteristicServer>,
         serviceUuids: List<UUID>? = null,
         advertisingIntensity: Float = .5f
@@ -99,7 +99,7 @@ object Ble {
     }
 
     fun scan(
-        viewDependency: ViewDependency,
+        viewDependency: ActivityAccess,
         withServices: List<UUID> = listOf(),
         intensity: Float = .5f
     ): Observable<BleScanResult> = getBluetooth(viewDependency)
@@ -134,7 +134,7 @@ object Ble {
             )
         }
 
-    fun connect(viewDependency: ViewDependency, deviceId: String): Observable<BleConnection> {
+    fun connect(viewDependency: ActivityAccess, deviceId: String): Observable<BleConnection> {
         var device = BleDeviceInfo(deviceId, null)
         return getBluetooth(viewDependency)
             .flatMap {
