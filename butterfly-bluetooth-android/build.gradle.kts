@@ -33,6 +33,8 @@ apply(plugin = "com.lightningkite.khrysalis")
 configure<KhrysalisPluginExtension> {
     projectName = "ButterflyBluetooth"
     organizationName = "Lightning Kite"
+    overrideIosFolder = project.projectDir.resolve("../../butterfly-bluetooth-ios").toString()
+    overrideWebFolder = project.projectDir.resolve("../../butterfly-bluetooth-web").toString()
 }
 
 group = "com.lightningkite.butterfly"

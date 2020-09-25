@@ -1,4 +1,4 @@
-//! This file is Khrysalis compatible.
+//! This file will translate using Khrysalis.
 package com.lightningkite.butterfly.bluetooth
 
 import com.lightningkite.butterfly.bytes.Data
