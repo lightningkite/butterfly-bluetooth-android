@@ -13,8 +13,6 @@ import io.reactivex.Single
 import io.reactivex.SingleEmitter
 import java.util.*
 
-val notificationDescriptorUuid: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
-
 private var activityAccessBle: RxBleClient? = null
 val ActivityAccess.ble: Single<RxBleClient> get(){
     return Single.create { emitter: SingleEmitter<RxBleClient> ->

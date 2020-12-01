@@ -262,13 +262,16 @@ class BleServer(
             server?.addService(servicesToAdd.removeAt(0))
     }
 
-    var advertising: Boolean = false
+    var advertising: Boolean = true
         set(value) {
             if(value && !field) startAdvertising()
             else if(!value) stopAdvertising()
 
             field = value
         }
+    init {
+        startAdvertising()
+    }
     private fun startAdvertising() {
         val advertiserCallback = object : AdvertiseCallback() {
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {

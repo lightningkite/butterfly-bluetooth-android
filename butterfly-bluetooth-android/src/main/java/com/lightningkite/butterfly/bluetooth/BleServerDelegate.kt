@@ -10,6 +10,7 @@ import io.reactivex.Observable
 import io.reactivex.Single
 import io.reactivex.disposables.Disposable
 import java.util.*
+import com.lightningkite.butterfly.rx.AbstractDisposable
 
 interface BleServerDelegate: Disposable {
     val profile: BleProfileDescription
@@ -21,7 +22,7 @@ interface BleServerDelegate: Disposable {
 
     class PerCharacteristic(
         val services: Map<UUID, Service>
-    ) : BleServerDelegate {
+    ) : AbstractDisposable(), BleServerDelegate {
         constructor(vararg pairs: Pair<UUID, Service>):this(pairs.associate { it })
         override val profile: BleProfileDescription = BleProfileDescription(services.mapValues {
             BleServiceDescription(
@@ -90,13 +91,9 @@ interface BleServerDelegate: Disposable {
             )
         }
 
-        private var disposed: Boolean = false
-        override fun isDisposed(): Boolean = disposed
-        override fun dispose() {
+        override fun onDispose() {
             services.asSequence().flatMap { it.value.delegates.asSequence() }.forEach { it.value.dispose() }
-            disposed = true
         }
-
 
         class FromProperty(
             override val debugName: String,
@@ -109,7 +106,7 @@ interface BleServerDelegate: Disposable {
                 notify = true,
                 indicate = true
             )
-        ) : Delegate {
+        ) : AbstractDisposable(), Delegate {
             override fun onConnect(from: BleDeviceInfo) {}
             override fun onDisconnect(from: BleDeviceInfo) {}
             override fun onSubscribe(from: BleDeviceInfo): Observable<Data> {
@@ -125,11 +122,7 @@ interface BleServerDelegate: Disposable {
                 return Single.just(Unit)
             }
 
-            private var disposed: Boolean = false
-            override fun isDisposed(): Boolean = disposed
-            override fun dispose() {
-                disposed = true
-            }
+            override fun onDispose() {}
         }
     }
 
