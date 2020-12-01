@@ -14,17 +14,18 @@ import android.os.ParcelUuid
 import android.util.Log
 import androidx.annotation.RequiresApi
 import com.lightningkite.butterfly.bytes.Data
-import com.lightningkite.butterfly.observables.StandardObservableProperty
+import com.lightningkite.butterfly.rx.DisposeCondition
+import com.lightningkite.butterfly.rx.forever
+import com.lightningkite.butterfly.rx.until
+import io.reactivex.disposables.Disposable
+import io.reactivex.rxkotlin.subscribeBy
 import io.reactivex.subjects.PublishSubject
 import java.util.*
-import kotlin.collections.HashSet
 
-class BleServerImpl(
-    override val characteristics: Map<UUID, Map<UUID, BleCharacteristicServer>>,
-    val serviceUuids: List<UUID>? = null,
+class BleServer(
+    val delegate: BleServerDelegate,
     val advertisingIntensity: Float = .5f
-) :
-    BluetoothGattServerCallback(), BleServer {
+) : BluetoothGattServerCallback(), Disposable {
 
     var advertiserCallback: AdvertiseCallback? = null
     var advertiser: BluetoothLeAdvertiser? = null
@@ -42,72 +43,56 @@ class BleServerImpl(
         }
     private val servicesToAdd = ArrayList<BluetoothGattService>()
 
-    val clients: StandardObservableProperty<Map<String, BleClient>> = StandardObservableProperty(mapOf(), PublishSubject.create()/*TODO main thread only*/)
-
-    private val subscriptionTracking = HashMap<BleClient, HashSet<BleCharacteristicServer>>()
-
-    fun clientFor(device: BluetoothDevice): BleClient {
-        clients.value[device.address]?.let { return it }
-        val new = BleClientImpl(this, device)
-        new.connected = true
-        clients.value = clients.value + (device.address to new)
-        return new
-    }
-
-    fun removeClientFor(device: BluetoothDevice) {
-        clients.value = clients.value.toMutableMap().apply { (remove(device.address) as? BleClientImpl)?.connected = false }
-    }
-
-    val services = characteristics.mapValues {
+    val services = delegate.profile.services.mapValues {
         BluetoothGattService(it.key, BluetoothGattService.SERVICE_TYPE_PRIMARY).apply {
-            for (item in it.value.values) {
+            for (item in it.value.characteristics) {
                 addCharacteristic(BluetoothGattCharacteristic(
-                    item.characteristic.characteristicUuid,
+                    item.key,
                     run {
                         var total = 0
-                        if (item.properties.broadcast)
+                        if (item.value.properties.broadcast)
                             total = total or BluetoothGattCharacteristic.PROPERTY_BROADCAST
-                        if (item.properties.read)
+                        if (item.value.properties.read)
                             total = total or BluetoothGattCharacteristic.PROPERTY_READ
-                        if (item.properties.writeWithoutResponse)
+                        if (item.value.properties.writeWithoutResponse)
                             total = total or BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE
-                        if (item.properties.write)
+                        if (item.value.properties.write)
                             total = total or BluetoothGattCharacteristic.PROPERTY_WRITE
-                        if (item.properties.notify)
+                        if (item.value.properties.notify)
                             total = total or BluetoothGattCharacteristic.PROPERTY_NOTIFY
-                        if (item.properties.indicate)
+                        if (item.value.properties.indicate)
                             total = total or BluetoothGattCharacteristic.PROPERTY_INDICATE
-                        if (item.properties.authenticatedSignedWrites)
+                        if (item.value.properties.authenticatedSignedWrites)
                             total = total or BluetoothGattCharacteristic.PROPERTY_SIGNED_WRITE
-                        if (item.properties.extendedProperties)
+                        if (item.value.properties.extendedProperties)
                             total = total or BluetoothGattCharacteristic.PROPERTY_EXTENDED_PROPS
                         total
                     },
                     run {
                         var total = 0
-                        if (item.properties.read)
+                        if (item.value.properties.read)
                             total = total or BluetoothGattCharacteristic.PERMISSION_READ
-                        if (item.properties.writeWithoutResponse)
+                        if (item.value.properties.writeWithoutResponse)
                             total = total or BluetoothGattCharacteristic.PERMISSION_WRITE
-                        if (item.properties.write)
+                        if (item.value.properties.write)
                             total = total or BluetoothGattCharacteristic.PERMISSION_WRITE
-                        if (item.properties.notify)
+                        if (item.value.properties.notify)
                             total = total or BluetoothGattCharacteristic.PERMISSION_READ
-                        if (item.properties.indicate)
+                        if (item.value.properties.indicate)
                             total = total or BluetoothGattCharacteristic.PERMISSION_READ
-                        if (item.properties.authenticatedSignedWrites)
+                        if (item.value.properties.authenticatedSignedWrites)
                             total = total or BluetoothGattCharacteristic.PERMISSION_WRITE
-                        if (item.properties.notifyEncryptionRequired)
+                        if (item.value.properties.notifyEncryptionRequired)
                             total = total or BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED
-                        if (item.properties.indicateEncryptionRequired)
+                        if (item.value.properties.indicateEncryptionRequired)
                             total = total or BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED
                         total
                     }
                 ).apply {
-                    if (item.properties.notify || item.properties.indicate) {
+                    if (item.value.properties.notify || item.value.properties.indicate) {
                         addDescriptor(
                             BluetoothGattDescriptor(
-                                Ble.notificationDescriptorUuid,
+                                notificationDescriptorUuid,
                                 BluetoothGattDescriptor.PERMISSION_WRITE or BluetoothGattDescriptor.PERMISSION_READ
                             )
                         )
@@ -148,17 +133,18 @@ class BleServerImpl(
         value: Data
     ) {
         Log.i("BleServerImpl", "onCharacteristicWriteRequest(device = ${device.address}, characteristic = ${characteristic.uuid}, value = ${value.joinToString { it.toString(16) }})")
-        val service = characteristics[characteristic.service.uuid] ?: run {
-            server?.sendResponse(device, requestId, BleResponseStatus.attributeNotFound.value, 0, byteArrayOf())
-            Log.e("BleServerImpl", "Service ${characteristic.service.uuid} not found")
-            return
-        }
-        val characteristicServer = service[characteristic.uuid] ?: run {
-            server?.sendResponse(device, requestId, BleResponseStatus.attributeNotFound.value, 0, byteArrayOf())
-            Log.e("BleServerImpl", "Characteristic ${characteristic.uuid} not found")
-            return
-        }
-        characteristicServer.onWrite(clientFor(device), requestId, value)
+        delegate.onWrite(BleDeviceInfo(device.address, device.name), characteristic.service.uuid, characteristic.uuid, value).subscribeBy(
+            onError = {
+                if(it is BleResponseException){
+                    server?.sendResponse(device, requestId, it.value.value, 0, byteArrayOf())
+                } else {
+                    server?.sendResponse(device, requestId, BleResponseStatus.requestNotSupported.value, 0, byteArrayOf())
+                }
+            },
+            onSuccess = {
+                server?.sendResponse(device, requestId, BleResponseStatus.success.value, 0, byteArrayOf())
+            }
+        ).forever()
     }
 
     override fun onCharacteristicReadRequest(
@@ -168,27 +154,30 @@ class BleServerImpl(
         characteristic: BluetoothGattCharacteristic
     ) {
         Log.i("BleServerImpl", "onCharacteristicReadRequest(device = ${device.address}, characteristic = ${characteristic.uuid})")
-        val service = characteristics[characteristic.service.uuid] ?: run {
-            server?.sendResponse(device, requestId, BleResponseStatus.attributeNotFound.value, 0, byteArrayOf())
-            Log.e("BleServerImpl", "Service ${characteristic.service.uuid} not found")
-            return
-        }
-        val characteristicServer = service[characteristic.uuid] ?: run {
-            server?.sendResponse(device, requestId, BleResponseStatus.attributeNotFound.value, 0, byteArrayOf())
-            Log.e("BleServerImpl", "Characteristic ${characteristic.uuid} not found")
-            return
-        }
-        characteristicServer.onRead(clientFor(device), requestId)
+        delegate.onRead(BleDeviceInfo(device.address, device.name), characteristic.service.uuid, characteristic.uuid).subscribeBy(
+            onError = {
+                if(it is BleResponseException){
+                    server?.sendResponse(device, requestId, it.value.value, 0, byteArrayOf())
+                } else {
+                    server?.sendResponse(device, requestId, BleResponseStatus.requestNotSupported.value, 0, byteArrayOf())
+                }
+            },
+            onSuccess = {
+                server?.sendResponse(device, requestId, BleResponseStatus.success.value, 0, it)
+            }
+        ).forever()
     }
 
     override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
         Log.i("BleServerImpl", "onConnectionStateChange(device = ${device.address}, newState = ${newState})")
         when(newState){
-            BluetoothProfile.STATE_CONNECTED -> clientFor(device)
+            BluetoothProfile.STATE_CONNECTED -> {
+                delegate.onConnect(BleDeviceInfo(device.address, device.name))
+            }
             BluetoothProfile.STATE_DISCONNECTED -> {
-                val client = clientFor(device)
-                subscriptionTracking[client]?.forEach { it.onDisconnect(client) }
-                removeClientFor(device)
+                delegate.onDisconnect(BleDeviceInfo(device.address, device.name))
+                unsubOrDisconnectListeners[device]?.onComplete()
+                unsubOrDisconnectListeners.remove(device)
             }
         }
     }
@@ -197,6 +186,20 @@ class BleServerImpl(
         super.onPhyRead(device, txPhy, rxPhy, status)
     }
 
+    val unsubOrDisconnectListeners = HashMap<BluetoothDevice, PublishSubject<BluetoothGattDescriptor>>()
+    private fun deviceUnsubscribesOrDisconnects(device: BluetoothDevice, descriptor: BluetoothGattDescriptor): DisposeCondition {
+        return DisposeCondition { disposable ->
+            unsubOrDisconnectListeners.getOrPut(device) { PublishSubject.create() }
+                .filter { it == descriptor }
+                .take(1)
+                .subscribeBy(
+                    onComplete = {
+                        disposable.dispose()
+                    }
+                )
+                .forever()
+        }
+    }
     override fun onDescriptorWriteRequest(
         device: BluetoothDevice,
         requestId: Int,
@@ -207,35 +210,47 @@ class BleServerImpl(
         value: Data
     ) {
         Log.i("BleServerImpl", "onDescriptorWriteRequest(device = ${device.address}, descriptor = ${descriptor.characteristic.uuid}/${descriptor.uuid})")
-        val service = characteristics[descriptor.characteristic.service.uuid] ?: run {
-            server?.sendResponse(device, requestId, BleResponseStatus.attributeNotFound.value, 0, byteArrayOf())
-            Log.e("BleServerImpl", "Service ${descriptor.characteristic.service.uuid} not found")
-            return
-        }
-        val characteristicServer = service[descriptor.characteristic.uuid] ?: run {
-            server?.sendResponse(device, requestId, BleResponseStatus.attributeNotFound.value, 0, byteArrayOf())
-            Log.e("BleServerImpl", "Characteristic ${descriptor.characteristic.uuid} not found")
-            return
-        }
-        if(descriptor.uuid != Ble.notificationDescriptorUuid){
-            server?.sendResponse(device, requestId, BleResponseStatus.attributeNotFound.value, 0, byteArrayOf())
-            return
-        }
-        when(value.joinToString()){
-            BluetoothGattDescriptor.ENABLE_INDICATION_VALUE.joinToString() -> {
-                val client = clientFor(device)
-                subscriptionTracking.getOrPut(client){HashSet()}.add(characteristicServer)
-                characteristicServer.onSubscribe(client)
+        when(value[0]){
+            BluetoothGattDescriptor.ENABLE_INDICATION_VALUE[0] -> {
+                delegate.onSubscribe(BleDeviceInfo(device.address, device.name), descriptor.characteristic.service.uuid, descriptor.characteristic.uuid).subscribeBy(
+                    onError = {
+                        Log.e("BleServerImpl", "Got an error while handling indication:")
+                        it.printStackTrace()
+                        //TODO: Not sure what to do here?  There's no way to inform the device it failed.
+                    },
+                    onNext = { updateValue ->
+                        server?.notifyCharacteristicChanged(
+                            device,
+                            descriptor.characteristic.apply { this.value = updateValue },
+                            true
+                        )
+                    },
+                    onComplete = {
+                        Log.v("BleServerImpl", "Completed indication updates.")
+                    }
+                ).until(deviceUnsubscribesOrDisconnects(device, descriptor))
             }
-            BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE.joinToString() -> {
-                val client = clientFor(device)
-                subscriptionTracking.getOrPut(client){HashSet()}.add(characteristicServer)
-                characteristicServer.onSubscribe(client)
+            BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE[0] -> {
+                delegate.onSubscribe(BleDeviceInfo(device.address, device.name), descriptor.characteristic.service.uuid, descriptor.characteristic.uuid).subscribeBy(
+                    onError = {
+                        Log.e("BleServerImpl", "Got an error while handling notification:")
+                        it.printStackTrace()
+                        //TODO: Not sure what to do here?  There's no way to inform the device it failed.
+                    },
+                    onNext = { updateValue ->
+                        server?.notifyCharacteristicChanged(
+                            device,
+                            descriptor.characteristic.apply { this.value = updateValue },
+                            false
+                        )
+                    },
+                    onComplete = {
+                        Log.v("BleServerImpl", "Completed notification updates.")
+                    }
+                ).until(deviceUnsubscribesOrDisconnects(device, descriptor))
             }
-            BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE.joinToString() -> {
-                val client = clientFor(device)
-                subscriptionTracking.getOrPut(client){HashSet()}.remove(characteristicServer)
-                characteristicServer.onUnsubscribe(client)
+            BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE[0] -> {
+                unsubOrDisconnectListeners[device]?.onNext(descriptor)
             }
         }
         server?.sendResponse(device, requestId, BleResponseStatus.success.value, 0, null)
@@ -247,7 +262,7 @@ class BleServerImpl(
             server?.addService(servicesToAdd.removeAt(0))
     }
 
-    override var advertising: Boolean = false
+    var advertising: Boolean = false
         set(value) {
             if(value && !field) startAdvertising()
             else if(!value) stopAdvertising()
@@ -257,11 +272,11 @@ class BleServerImpl(
     private fun startAdvertising() {
         val advertiserCallback = object : AdvertiseCallback() {
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
-                println("Advertising successfully!")
+                Log.i("BleServerImpl", "Advertising successfully!")
             }
 
             override fun onStartFailure(errorCode: Int) {
-                Log.e("Ble.Actual", "Failed to begin advertising.  Code: $errorCode")
+                Log.e("BleServerImpl", "Failed to begin advertising.  Code: $errorCode")
             }
         }
         advertiser?.startAdvertising(
@@ -280,14 +295,11 @@ class BleServerImpl(
                 .build(),
             AdvertiseData.Builder()
                 .apply {
-                    serviceUuids?.forEach {
-                        addServiceUuid(ParcelUuid(it))
-                    } ?: run {
-                        characteristics.keys.forEach {
-                            addServiceUuid(ParcelUuid(it))
-                        }
-                    }
-                    //TODO: Service/manufacturing data?
+                    this.setIncludeDeviceName(true)
+//                    this.setIncludeTxPowerLevel(true)
+//                    delegate.profile.services.filter { it.value.primary }.keys.forEach {
+//                        addServiceUuid(ParcelUuid(it))
+//                    }
                 }
                 .build(),
             advertiserCallback
@@ -310,31 +322,6 @@ class BleServerImpl(
         advertiserCallback = null
         server?.close()
         server = null
-    }
-
-}
-
-class BleClientImpl(val server: BleServerImpl, val device: BluetoothDevice) : BleClient {
-    override val info: BleDeviceInfo = BleDeviceInfo(device.address ?: "", device.name ?: "")
-    override var connected: Boolean = false
-    override fun respond(request: RequestId, data: Data, status: BleResponseStatus) {
-        server.server?.sendResponse(device, request, status.value, 0, data)
-    }
-
-    override fun notify(service: UUID, characteristic: UUID, value: Data) {
-        server.server?.notifyCharacteristicChanged(
-            device,
-            server.services[service]!!.getCharacteristic(characteristic).apply { this.value = value },
-            false
-        )
-    }
-
-    override fun indicate(service: UUID, characteristic: UUID, value: Data) {
-        server.server?.notifyCharacteristicChanged(
-            device,
-            server.services[service]!!.getCharacteristic(characteristic).apply { this.value = value },
-            true
-        )
     }
 
 }
