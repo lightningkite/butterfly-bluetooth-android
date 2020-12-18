@@ -24,7 +24,8 @@ import java.util.*
 
 class BleServer(
     val delegate: BleServerDelegate,
-    val advertisingIntensity: Float = .5f
+    val advertiseSettings: AdvertiseSettings,
+    val advertiseData: AdvertiseData
 ) : BluetoothGattServerCallback(), Disposable {
 
     var advertiserCallback: AdvertiseCallback? = null
@@ -269,8 +270,8 @@ class BleServer(
 
             field = value
         }
-    init {
-        startAdvertising()
+    fun ready(){
+        if(advertising) startAdvertising()
     }
     private fun startAdvertising() {
         val advertiserCallback = object : AdvertiseCallback() {
@@ -283,28 +284,8 @@ class BleServer(
             }
         }
         advertiser?.startAdvertising(
-            AdvertiseSettings.Builder()
-                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-                .setTimeout(0)
-                .setConnectable(true)
-                .setAdvertiseMode(
-                    when (advertisingIntensity) {
-                        in 0f..0.33f -> AdvertiseSettings.ADVERTISE_MODE_LOW_POWER
-                        in 0.33f..0.66f -> AdvertiseSettings.ADVERTISE_MODE_BALANCED
-                        in 0.66f..1f -> AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY
-                        else -> AdvertiseSettings.ADVERTISE_MODE_LOW_POWER
-                    }
-                )
-                .build(),
-            AdvertiseData.Builder()
-                .apply {
-                    this.setIncludeDeviceName(true)
-//                    this.setIncludeTxPowerLevel(true)
-//                    delegate.profile.services.filter { it.value.primary }.keys.forEach {
-//                        addServiceUuid(ParcelUuid(it))
-//                    }
-                }
-                .build(),
+            advertiseSettings,
+            advertiseData,
             advertiserCallback
         )
     }
