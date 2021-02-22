@@ -22,7 +22,7 @@ plugins {
     id("com.android.library")
     id("kotlin-android")
     id("kotlin-android-extensions")
-    id("digital.wup.android-maven-publish") version "3.6.2"
+    `maven-publish`
 }
 
 group = "com.lightningkite.butterfly"
@@ -67,14 +67,23 @@ tasks.create("sourceJar", Jar::class) {
     from(project.projectDir.resolve("src/include"))
 }
 
-publishing {
-    publications {
-        val mavenAar by creating(MavenPublication::class) {
-            from(components["android"])
-            artifact(tasks.getByName("sourceJar"))
-            groupId = project.group.toString()
-            artifactId = project.name
-            version = project.version.toString()
+afterEvaluate {
+    publishing {
+        publications {
+            val release by creating(MavenPublication::class) {
+                from(components["release"])
+                artifact(tasks.getByName("sourceJar"))
+                groupId = project.group.toString()
+                artifactId = project.name
+                version = project.version.toString()
+            }
+            val debug by creating(MavenPublication::class) {
+                from(components["debug"])
+                artifact(tasks.getByName("sourceJar"))
+                groupId = project.group.toString()
+                artifactId = project.name
+                version = project.version.toString()
+            }
         }
     }
 }
