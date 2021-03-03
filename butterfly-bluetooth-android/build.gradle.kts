@@ -44,7 +44,7 @@ android {
 }
 
 dependencies {
-    api("com.lightningkite.butterfly:butterfly-android:0.1.1")
+    api("com.lightningkite.butterfly:butterfly-android:0.1.2")
     testImplementation("junit:junit:4.12")
     androidTestImplementation("androidx.test:runner:1.3.0")
     androidTestImplementation("com.android.support.test.espresso:espresso-core:3.0.2")
