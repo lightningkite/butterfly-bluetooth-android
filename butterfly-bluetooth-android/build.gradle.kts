@@ -139,21 +139,20 @@ tasks.named<Upload>("uploadArchives") {
             }
             "pom" {
                 "project" {
-                    setProperty("name", "Butterfly-Android")
+                    setProperty("name", "Butterfly-Bluetooth-Android")
                     setProperty("packaging", "aar")
                     setProperty(
-                        "description",
-                        "An Android framework for consistent and stable app development.  Built for easy use with Khrysalis, a code conversion tool."
+                        "description", "A bluetooth extension to Butterfly-Android."
                     )
-                    setProperty("url", "https://github.com/lightningkite/butterfly-android")
+                    setProperty("url", "https://github.com/lightningkite/butterfly-bluetooth-android")
 
                     "scm" {
-                        setProperty("connection", "scm:git:https://github.com/lightningkite/butterfly-android.git")
+                        setProperty("connection", "scm:git:https://github.com/lightningkite/butterfly-bluetooth-android.git")
                         setProperty(
                             "developerConnection",
-                            "scm:git:https://github.com/lightningkite/butterfly-android.git"
+                            "scm:git:https://github.com/lightningkite/butterfly-bluetooth-android.git"
                         )
-                        setProperty("url", "https://github.com/lightningkite/butterfly-android")
+                        setProperty("url", "https://github.com/lightningkite/butterfly-bluetooth-android")
                     }
 
                     "licenses" {
