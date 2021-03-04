@@ -104,7 +104,13 @@ afterEvaluate {
     }
 }
 
-
+tasks.register("uploadSnapshot"){
+    group="upload"
+    finalizedBy("uploadArchives")
+    doLast{
+        project.version = project.version.toString() + "-SNAPSHOT"
+    }
+}
 
 tasks.named<Upload>("uploadArchives") {
     repositories.withConvention(MavenRepositoryHandlerConvention::class) {
