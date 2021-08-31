@@ -19,7 +19,7 @@ plugins {
 }
 
 group = "com.lightningkite.butterfly"
-version = "0.1.1"
+version = "0.1.2"
 
 
 val props = project.rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { stream ->
@@ -65,8 +65,8 @@ android {
     defaultConfig {
         minSdkVersion(21)
         targetSdkVersion(30)
-        versionCode = 5
-        versionName = "1.0.5"
+        versionCode = 1
+        versionName = "1.0.0"
     }
     compileOptions {
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -74,12 +74,12 @@ android {
 }
 
 dependencies {
-    api("com.lightningkite.butterfly:butterfly-android:0.1.2")
-    testImplementation("junit:junit:4.12")
-    androidTestImplementation("androidx.test:runner:1.3.0")
+    api("com.lightningkite.butterfly:butterfly-android:1.0.0")
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:runner:1.4.0")
     androidTestImplementation("com.android.support.test.espresso:espresso-core:3.0.2")
     api("com.polidea.rxandroidble2:rxandroidble:1.11.0")
-    api("androidx.appcompat:appcompat:1.2.0")
+    api("androidx.appcompat:appcompat:1.3.1")
     api("io.reactivex.rxjava2:rxkotlin:2.4.0")
     api("io.reactivex.rxjava2:rxandroid:2.1.1")
 }

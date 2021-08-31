@@ -2,7 +2,6 @@
 package com.lightningkite.butterfly.bluetooth
 
 import com.lightningkite.butterfly.SharedCode
-import com.lightningkite.butterfly.bytes.Data
 import java.util.*
 
 data class BleProfileDescription(

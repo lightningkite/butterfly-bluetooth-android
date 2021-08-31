@@ -8,9 +8,9 @@ import android.content.Context
 import android.os.ParcelUuid
 import androidx.core.content.ContextCompat
 import com.lightningkite.butterfly.PlatformSpecific
-import com.lightningkite.butterfly.android.ActivityAccess
 import com.lightningkite.butterfly.net.HttpClient
 import com.lightningkite.butterfly.views.startIntent
+import com.lightningkite.rxkotlinproperty.viewgenerators.ActivityAccess
 import com.polidea.rxandroidble2.RxBleClient
 import io.reactivex.Single
 import io.reactivex.SingleEmitter

@@ -14,9 +14,9 @@ import android.os.ParcelUuid
 import android.util.Log
 import androidx.annotation.RequiresApi
 import com.lightningkite.butterfly.bytes.Data
-import com.lightningkite.butterfly.rx.DisposeCondition
-import com.lightningkite.butterfly.rx.forever
-import com.lightningkite.butterfly.rx.until
+import com.lightningkite.rxkotlinproperty.DisposeCondition
+import com.lightningkite.rxkotlinproperty.forever
+import com.lightningkite.rxkotlinproperty.until
 import io.reactivex.disposables.Disposable
 import io.reactivex.rxkotlin.subscribeBy
 import io.reactivex.subjects.PublishSubject

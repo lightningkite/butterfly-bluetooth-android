@@ -4,13 +4,13 @@ package com.lightningkite.butterfly.bluetooth
 
 import com.lightningkite.butterfly.SharedCode
 import com.lightningkite.butterfly.bytes.Data
-import com.lightningkite.butterfly.observables.MutableObservableProperty
-import com.lightningkite.butterfly.observables.observableNN
+import com.lightningkite.rxkotlinproperty.AbstractDisposable
+import com.lightningkite.rxkotlinproperty.MutableProperty
+import com.lightningkite.rxkotlinproperty.observableNN
 import io.reactivex.Observable
 import io.reactivex.Single
 import io.reactivex.disposables.Disposable
 import java.util.*
-import com.lightningkite.butterfly.rx.AbstractDisposable
 
 interface BleServerDelegate: Disposable {
     val profile: BleProfileDescription
@@ -97,7 +97,7 @@ interface BleServerDelegate: Disposable {
 
         class FromProperty(
             override val debugName: String,
-            val property: MutableObservableProperty<Data>,
+            val property: MutableProperty<Data>,
             override val properties: BleCharacteristicProperties = BleCharacteristicProperties(
                 broadcast = true,
                 read = true,

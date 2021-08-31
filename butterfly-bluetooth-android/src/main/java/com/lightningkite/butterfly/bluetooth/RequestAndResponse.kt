@@ -1,13 +1,12 @@
 package com.lightningkite.butterfly.bluetooth
 
-import com.lightningkite.butterfly.Log
 import com.lightningkite.butterfly.bytes.Data
-import com.lightningkite.butterfly.rx.forever
+import com.lightningkite.rxkotlinproperty.forever
+import com.lightningkite.rxkotlinproperty.viewgenerators.Log
 import com.polidea.rxandroidble2.RxBleConnection
 import io.reactivex.Observable
 import io.reactivex.Single
 import io.reactivex.rxkotlin.subscribeBy
-import io.reactivex.subjects.BehaviorSubject
 import io.reactivex.subjects.PublishSubject
 import java.util.*
 import kotlin.collections.HashMap
