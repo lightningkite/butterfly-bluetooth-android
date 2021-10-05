@@ -19,7 +19,7 @@ plugins {
 }
 
 group = "com.lightningkite.butterfly"
-version = "0.1.2"
+version = "1.0.0"
 
 
 val props = project.rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { stream ->
