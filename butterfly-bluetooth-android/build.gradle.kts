@@ -13,12 +13,12 @@ plugins {
     id("kotlin-android-extensions")
     id("maven")
     id("signing")
-    id("org.jetbrains.dokka") version "1.4.20"
+    id("org.jetbrains.dokka")
     `maven-publish`
 }
 
 group = "com.lightningkite.butterfly"
-version = "0.1.1"
+version = "0.2.0"
 
 
 val props = project.rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { stream ->
@@ -72,7 +72,8 @@ android {
 }
 
 dependencies {
-    api("com.lightningkite.butterfly:butterfly-android:0.1.2")
+//    api("com.lightningkite.butterfly:butterfly-android:0.1.3")
+    api(project(":butterfly-android"))
     testImplementation("junit:junit:4.12")
     androidTestImplementation("androidx.test:runner:1.3.0")
     androidTestImplementation("com.android.support.test.espresso:espresso-core:3.0.2")
