@@ -13,7 +13,6 @@ fun DependencyHandler.elastic(notation: String): Dependency {
 buildscript {
     repositories {
         google()
-        jcenter()
         mavenLocal()
     }
 }
@@ -29,7 +28,6 @@ group = "com.lightningkite.butterfly"
 version = "0.1.1"
 
 repositories {
-    jcenter()
     mavenCentral()
     maven("https://jitpack.io")
     google()
